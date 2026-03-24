@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!--
+  1-DOF Pendulum
+  Joint rotates about Y-axis.
+  Link hangs in the -Z direction from the revolute joint.
+  True parameters:
+    link1: m=1.0 kg, L=0.5 m, COM at z=-0.25 m
+           I_com (thin rod) = m*L²/12 ≈ 0.02083 kg·m²
+-->
+<robot name="pendulum">
+
+  <link name="base"/>
+
+  <link name="link1">
+    <inertial>
+      <origin xyz="0 0 -0.25" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.02083" ixy="0.0" ixz="0.0"
+               iyy="0.02083" iyz="0.0"
+               izz="0.0"/>
+    </inertial>
+  </link>
+
+  <joint name="joint1" type="revolute">
+    <parent link="base"/>
+    <child link="link1"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159" upper="3.14159" effort="100.0" velocity="10.0"/>
+  </joint>
+
+</robot>

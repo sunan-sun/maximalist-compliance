@@ -1,0 +1,187 @@
+<?xml version="1.0"?>
+<!--
+  6-DOF Serial Arm  (UR5-inspired geometry, simplified)
+  ======================================================
+  Joint layout:
+    joint1  Z-axis  — base rotation (shoulder pan)
+    joint2  Y-axis  — shoulder lift
+    joint3  Y-axis  — elbow
+    joint4  Y-axis  — wrist 1
+    joint5  Z-axis  — wrist 2 (rotation)
+    joint6  Y-axis  — wrist 3 (flange)
+
+  Link masses / geometry (cylinder approximation):
+    link1  m=3.50 kg  h=0.10 m  r=0.05 m  (shoulder hub)
+    link2  m=6.00 kg  L=0.40 m  r=0.04 m  (upper arm)
+    link3  m=3.00 kg  L=0.35 m  r=0.04 m  (forearm)
+    link4  m=1.50 kg  L=0.15 m  r=0.03 m  (wrist 1)
+    link5  m=1.20 kg  L=0.10 m  r=0.03 m  (wrist 2)
+    link6  m=0.50 kg  L=0.08 m  r=0.025m  (flange / tool)
+
+  Inertias are about each link's COM, in the link frame.
+  Cylinder formulas:
+    I_axial      = m r² / 2
+    I_transverse = m (3r² + L²) / 12
+-->
+<robot name="sixdof_arm">
+
+  <!-- ── Fixed base ──────────────────────────────────────────── -->
+  <link name="base"/>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Link 1  —  shoulder hub  (rotates about Z)
+  ══════════════════════════════════════════════════════════════ -->
+  <link name="link1">
+    <inertial>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>   <!-- COM at hub centre -->
+      <mass value="3.50"/>
+      <!--
+        Cylinder h=0.10, r=0.05:
+          I_transverse = 3.5*(3*0.0025 + 0.01)/12 = 0.00510
+          I_axial      = 3.5*0.0025/2             = 0.00438
+      -->
+      <inertia ixx="0.00510" ixy="0.0" ixz="0.0"
+               iyy="0.00510" iyz="0.0"
+               izz="0.00438"/>
+    </inertial>
+  </link>
+
+  <joint name="joint1" type="revolute">
+    <parent link="base"/>
+    <child link="link1"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159" upper="3.14159" effort="150.0" velocity="3.15"/>
+  </joint>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Link 2  —  upper arm  (shoulder lift, hangs in −Z)
+  ══════════════════════════════════════════════════════════════ -->
+  <link name="link2">
+    <inertial>
+      <origin xyz="0 0 -0.20" rpy="0 0 0"/>  <!-- COM at half-length -->
+      <mass value="6.00"/>
+      <!--
+        Cylinder L=0.40, r=0.04:
+          I_transverse = 6.0*(3*0.0016 + 0.16)/12 = 0.08240
+          I_axial      = 6.0*0.0016/2              = 0.00480
+      -->
+      <inertia ixx="0.08240" ixy="0.0" ixz="0.0"
+               iyy="0.08240" iyz="0.0"
+               izz="0.00480"/>
+    </inertial>
+  </link>
+
+  <joint name="joint2" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin xyz="0 0 0.10" rpy="0 0 0"/>     <!-- top of link1 hub -->
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159" upper="3.14159" effort="150.0" velocity="3.15"/>
+  </joint>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Link 3  —  forearm  (elbow)
+  ══════════════════════════════════════════════════════════════ -->
+  <link name="link3">
+    <inertial>
+      <origin xyz="0 0 -0.175" rpy="0 0 0"/>
+      <mass value="3.00"/>
+      <!--
+        Cylinder L=0.35, r=0.04:
+          I_transverse = 3.0*(3*0.0016 + 0.1225)/12 = 0.03184
+          I_axial      = 3.0*0.0016/2               = 0.00240
+      -->
+      <inertia ixx="0.03184" ixy="0.0" ixz="0.0"
+               iyy="0.03184" iyz="0.0"
+               izz="0.00240"/>
+    </inertial>
+  </link>
+
+  <joint name="joint3" type="revolute">
+    <parent link="link2"/>
+    <child link="link3"/>
+    <origin xyz="0 0 -0.40" rpy="0 0 0"/>    <!-- end of upper arm -->
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159" upper="3.14159" effort="150.0" velocity="3.15"/>
+  </joint>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Link 4  —  wrist 1
+  ══════════════════════════════════════════════════════════════ -->
+  <link name="link4">
+    <inertial>
+      <origin xyz="0 0 -0.075" rpy="0 0 0"/>
+      <mass value="1.50"/>
+      <!--
+        Cylinder L=0.15, r=0.03:
+          I_transverse = 1.5*(3*0.0009 + 0.0225)/12 = 0.00315
+          I_axial      = 1.5*0.0009/2               = 0.000675
+      -->
+      <inertia ixx="0.00315" ixy="0.0" ixz="0.0"
+               iyy="0.00315" iyz="0.0"
+               izz="0.000675"/>
+    </inertial>
+  </link>
+
+  <joint name="joint4" type="revolute">
+    <parent link="link3"/>
+    <child link="link4"/>
+    <origin xyz="0 0 -0.35" rpy="0 0 0"/>    <!-- end of forearm -->
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159" upper="3.14159" effort="54.0" velocity="3.20"/>
+  </joint>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Link 5  —  wrist 2  (second rotation axis, now Z)
+  ══════════════════════════════════════════════════════════════ -->
+  <link name="link5">
+    <inertial>
+      <origin xyz="0 0 -0.05" rpy="0 0 0"/>
+      <mass value="1.20"/>
+      <!--
+        Cylinder L=0.10, r=0.03:
+          I_transverse = 1.2*(3*0.0009 + 0.01)/12 = 0.00127
+          I_axial      = 1.2*0.0009/2              = 0.000540
+      -->
+      <inertia ixx="0.00127" ixy="0.0" ixz="0.0"
+               iyy="0.00127" iyz="0.0"
+               izz="0.000540"/>
+    </inertial>
+  </link>
+
+  <joint name="joint5" type="revolute">
+    <parent link="link4"/>
+    <child link="link5"/>
+    <origin xyz="0 0 -0.15" rpy="0 0 0"/>    <!-- end of wrist 1 -->
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159" upper="3.14159" effort="54.0" velocity="3.20"/>
+  </joint>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Link 6  —  wrist 3 / flange
+  ══════════════════════════════════════════════════════════════ -->
+  <link name="link6">
+    <inertial>
+      <origin xyz="0 0 -0.04" rpy="0 0 0"/>
+      <mass value="0.50"/>
+      <!--
+        Cylinder L=0.08, r=0.025:
+          I_transverse = 0.5*(3*0.000625 + 0.0064)/12 = 0.000345
+          I_axial      = 0.5*0.000625/2               = 0.000156
+      -->
+      <inertia ixx="0.000345" ixy="0.0" ixz="0.0"
+               iyy="0.000345" iyz="0.0"
+               izz="0.000156"/>
+    </inertial>
+  </link>
+
+  <joint name="joint6" type="revolute">
+    <parent link="link5"/>
+    <child link="link6"/>
+    <origin xyz="0 0 -0.10" rpy="0 0 0"/>    <!-- end of wrist 2 -->
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159" upper="3.14159" effort="54.0" velocity="3.20"/>
+  </joint>
+
+</robot>

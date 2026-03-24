@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<!--
+  2-DOF Planar Arm (vertical plane, both joints about Y-axis)
+  True parameters:
+    link1: m=1.0 kg, L=0.4 m, COM at z=-0.2 m
+           I_com = m*L²/12 ≈ 0.01333 kg·m²
+    link2: m=0.8 kg, L=0.3 m, COM at z=-0.15 m
+           I_com = m*L²/12 = 0.006 kg·m²
+-->
+<robot name="planar_2dof">
+
+  <link name="base"/>
+
+  <link name="link1">
+    <inertial>
+      <origin xyz="0 0 -0.2" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.01333" ixy="0.0" ixz="0.0"
+               iyy="0.01333" iyz="0.0"
+               izz="0.0"/>
+    </inertial>
+  </link>
+
+  <link name="link2">
+    <inertial>
+      <origin xyz="0 0 -0.15" rpy="0 0 0"/>
+      <mass value="0.8"/>
+      <inertia ixx="0.006" ixy="0.0" ixz="0.0"
+               iyy="0.006" iyz="0.0"
+               izz="0.0"/>
+    </inertial>
+  </link>
+
+  <!-- Shoulder joint at base -->
+  <joint name="joint1" type="revolute">
+    <parent link="base"/>
+    <child link="link1"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159" upper="3.14159" effort="100.0" velocity="10.0"/>
+  </joint>
+
+  <!-- Elbow joint at end of link1 (0.4 m below shoulder) -->
+  <joint name="joint2" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin xyz="0 0 -0.4" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159" upper="3.14159" effort="100.0" velocity="10.0"/>
+  </joint>
+
+</robot>
