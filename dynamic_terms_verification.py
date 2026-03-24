@@ -6,9 +6,10 @@ to reconstruct individual dynamic terms via sub-regressors, then compares
 against Pinocchio's ground-truth computations.
 
 Terms reconstructed:
+  M(q)       ←  column-by-column: Y_M(q, 0, e_j)|_{g=0} · Φ*_0  for j=1..nv
   M(q)·q̈    ←  Y_M(q, 0, q̈)|_{g=0}  · Φ*_0
   G(q)       ←  Y_G(q, 0,  0)|_{g≠0}  · Φ*_0
-  C(q,q̇)·q̇ ←  Y_C(q, q̇, 0)|_{g=0}  · Φ*_0   ← NEW
+  C(q,q̇)·q̇ ←  Y_C(q, q̇, 0)|_{g=0}  · Φ*_0
   p(q,q̇)    ←  Y_M(q, 0, q̇)|_{g=0}  · Φ*_0   (momentum: substitute q̈→q̇)
 
 Note on Coriolis:
@@ -17,6 +18,7 @@ Note on Coriolis:
   Cᵀ·q̇ is computed here via pin.computeCoriolisMatrix (ground truth only).
 
 Ground truth (Pinocchio):
+  M(q)       ←  pin.crba(q)  (symmetrised)
   M(q)·q̈    ←  pin.crba(q) @ q̈
   G(q)       ←  pin.computeGeneralizedGravity(q)
   C(q,q̇)·q̇ ←  RNEA(q, q̇, 0) − G(q)
@@ -73,6 +75,35 @@ def sub_regressor_gravity(
     return _base_cols(Y_G, bp)
 
 
+def sub_regressor_mass_matrix(
+    model, data, q: np.ndarray, bp: BaseParams, pi_b: np.ndarray
+) -> np.ndarray:
+    """
+    Reconstruct M(q) from the inertia sub-regressor column by column.
+
+    M(q)[:, j]  =  Y_M_b(q, 0, e_j)|_{g=0}  · Φ*_0
+
+    Returns the full (nv, nv) mass matrix estimate.
+    """
+    nv = model.nv
+    M_est = np.zeros((nv, nv))
+
+    g_saved = model.gravity.linear.copy()
+    model.gravity.linear[:] = 0.0
+
+    for j in range(nv):
+        e_j = np.zeros(nv)
+        e_j[j] = 1.0
+        Y_M = pin.computeJointTorqueRegressor(
+            model, data, q, np.zeros(nv), e_j
+        )
+        Y_M_b = _base_cols(Y_M, bp)
+        M_est[:, j] = Y_M_b @ pi_b
+
+    model.gravity.linear[:] = g_saved
+    return M_est
+
+
 def sub_regressor_coriolis(
     model, data, q: np.ndarray, dq: np.ndarray, bp: BaseParams
 ) -> np.ndarray:
@@ -103,6 +134,13 @@ def sub_regressor_coriolis(
 # ─────────────────────────────────────────────────────────────────────────────
 # Ground truth via Pinocchio
 # ─────────────────────────────────────────────────────────────────────────────
+
+def ground_truth_mass_matrix(model, data, q):
+    """M(q)  via Composite Rigid Body Algorithm."""
+    M = pin.crba(model, data, q)
+    # crba only fills the upper triangle; symmetrise
+    return np.triu(M) + np.triu(M, 1).T
+
 
 def ground_truth_inertia_term(model, data, q, ddq):
     """M(q)·q̈  via Composite Rigid Body Algorithm."""
@@ -198,6 +236,13 @@ def verify(
     CTqdq_true = np.zeros((N, nv))  # ground truth  Cᵀ(q,q̇)·q̇  (for observer β)
     p_true     = np.zeros((N, nv))  # ground truth  p = M(q)·q̇
 
+    # Mass matrix arrays: diagonal elements + Frobenius norm
+    M_diag_est  = np.zeros((N, nv))
+    M_diag_true = np.zeros((N, nv))
+    M_frob_est  = np.zeros(N)
+    M_frob_true = np.zeros(N)
+    M_frob_err  = np.zeros(N)
+
     for i in range(N):
         q   = q_traj[i]
         dq  = dq_traj[i]
@@ -213,6 +258,16 @@ def verify(
         G_est[i]    = Y_G_b @ pi_b_est
         Cqdq_est[i] = Y_C_b @ pi_b_est
         p_est[i]    = Y_p_b @ pi_b_est
+
+        # ── Mass matrix M(q) ──
+        M_est_i  = sub_regressor_mass_matrix(model, data, q, bp, pi_b_est)
+        M_true_i = ground_truth_mass_matrix(model, data, q)
+
+        M_diag_est[i]  = np.diag(M_est_i)
+        M_diag_true[i] = np.diag(M_true_i)
+        M_frob_est[i]  = np.linalg.norm(M_est_i, 'fro')
+        M_frob_true[i] = np.linalg.norm(M_true_i, 'fro')
+        M_frob_err[i]  = np.linalg.norm(M_est_i - M_true_i, 'fro')
 
         # ── Ground truth (Pinocchio) ──
         Mddq_true[i]  = ground_truth_inertia_term(model, data, q, ddq)
@@ -231,6 +286,7 @@ def verify(
     print(f"  {'term':<25}  {'RMSE':>12}  {'norm RMSE':>12}")
     print("  " + "-" * 54)
     for label, est, true in [
+        ("M(q) diag",     M_diag_est, M_diag_true),
         ("M(q)·q̈",      Mddq_est,  Mddq_true),
         ("G(q)",          G_est,     G_true),
         ("C(q,q̇)·q̇",   Cqdq_est,  Cqdq_true),
@@ -254,6 +310,8 @@ def verify(
           G_est, G_true,
           Cqdq_est, Cqdq_true, CTqdq_true,
           p_est, p_true,
+          M_diag_est, M_diag_true,
+          M_frob_est, M_frob_true, M_frob_err,
           model.name)
 
     return pi_b_est, bp, {"Cqdq_est": Cqdq_est, "Cqdq_true": Cqdq_true, "CTqdq_true": CTqdq_true}
@@ -267,11 +325,13 @@ def _plot(t, Mddq_est, Mddq_true,
           G_est, G_true,
           Cqdq_est, Cqdq_true, CTqdq_true,
           p_est, p_true,
+          M_diag_est, M_diag_true,
+          M_frob_est, M_frob_true, M_frob_err,
           robot_name):
     nv     = Mddq_true.shape[1]
     colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
-    fig, axes = plt.subplots(2, 2, figsize=(15, 9))
+    fig, axes = plt.subplots(3, 2, figsize=(15, 13))
     fig.suptitle(
         f"Dynamic Term Verification — {robot_name}\n"
         f"Estimated (sub-regressor · Φ*_0)  vs  Ground Truth (Pinocchio)",
@@ -293,7 +353,7 @@ def _plot(t, Mddq_est, Mddq_true,
     overlay(axes[0, 1], G_true,    G_est,    "Gravity term  G(q)",              "N·m")
     overlay(axes[1, 0], p_true,    p_est,    "Generalised momentum  p=M(q)·q̇", "kg·m²/s")
 
-    # ── Bottom-right: Coriolis  C·q̇  (estimated vs true) + Cᵀ·q̇ ─────────────
+    # ── Coriolis  C·q̇  (estimated vs true) + Cᵀ·q̇ ─────────────
     ax = axes[1, 1]
     for j in range(nv):
         c = colors[j % len(colors)]
@@ -314,6 +374,26 @@ def _plot(t, Mddq_est, Mddq_true,
     ax.axhline(0, color="k", lw=0.5, ls="--")
     ax.set_ylabel("N·m"); ax.set_xlabel("t [s]")
     ax.legend(fontsize=5, ncol=2); ax.grid(True, alpha=0.3)
+
+    # ── Mass matrix diagonal elements M_ii(q) ─────────────────────────────
+    overlay(axes[2, 0], M_diag_true, M_diag_est,
+            "Mass matrix diagonal  M(q)_{ii}", "kg·m²")
+
+    # ── Mass matrix Frobenius norm + error ─────────────────────────────────
+    ax = axes[2, 1]
+    ax.plot(t, M_frob_true, color=colors[0], lw=1.5, alpha=0.6,
+            label="||M(q)||_F  true")
+    ax.plot(t, M_frob_est,  color=colors[0], lw=2.5, ls="--", alpha=1.0,
+            zorder=3, label="||M(q)||_F  est")
+    ax.plot(t, M_frob_err,  color=colors[1], lw=1.5,
+            label="||M_est − M_true||_F")
+    mean_rel = np.mean(M_frob_err / np.maximum(M_frob_true, 1e-12))
+    ax.set_title(
+        f"Mass matrix Frobenius norm\n"
+        f"mean relative error = {mean_rel:.4e}"
+    )
+    ax.set_ylabel("kg·m²"); ax.set_xlabel("t [s]")
+    ax.legend(fontsize=6); ax.grid(True, alpha=0.3)
 
     plt.tight_layout()
     out = f"dynamic_terms_{robot_name}.png"
