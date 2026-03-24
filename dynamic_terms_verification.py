@@ -408,7 +408,7 @@ def _plot(t, Mddq_est, Mddq_true,
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("urdf", nargs="?", default="robots/sixdof_arm.urdf")
+    p.add_argument("urdf", nargs="?", default="robots/my-robot/single_finger.xml")
     p.add_argument("--T",         type=float, default=30.0)
     p.add_argument("--dt",        type=float, default=1e-2)
     p.add_argument("--omega",     type=float, default=0.5)

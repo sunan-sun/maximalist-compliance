@@ -1,7 +1,7 @@
 """
 Plug-and-Play Robot Dynamic Parameter Identification
 =====================================================
-Drop in any URDF → get π̂_b (base inertial parameters) such that
+Drop in any URDF/MJCF → get π̂_b (base inertial parameters) such that
 
     τ = Y_b(q, q̇, q̈) · π_b
 
@@ -21,7 +21,7 @@ evaluated at many random configurations.
 
 Pipeline
 --------
-1. Load robot from URDF via Pinocchio
+1. Load robot from URDF or MJCF via Pinocchio
 2. Find base parameter structure (rank-revealing QR on random regressors)
 3. Generate Fourier-series excitation trajectory
 4. Compute stacked base regressor  Y_b ∈ ℝ^{N·nv × r}
@@ -30,8 +30,9 @@ Pipeline
 
 Usage
 -----
-    python robot_identification.py robots/planar_2dof.urdf
-    python robot_identification.py robots/pendulum.urdf --T 60 --noise 0.05
+    python robot_identification.py
+    python robot_identification.py robots/my-robot/single_finger.xml
+    python robot_identification.py robots/sixdof_arm.urdf --T 60 --noise 0.05
 """
 
 import argparse
@@ -98,8 +99,22 @@ class RobotIdentifier:
 
     def __init__(self, urdf_path: str | Path, verbose: bool = True):
         self.urdf_path = str(urdf_path)
-        self.model = pin.buildModelFromUrdf(self.urdf_path)
+        suffix = Path(self.urdf_path).suffix.lower()
+        if suffix == '.xml':
+            self.model = pin.buildModelFromMJCF(self.urdf_path)
+        else:
+            self.model = pin.buildModelFromUrdf(self.urdf_path)
         self.data  = self.model.createData()
+
+        # Ensure all joints have finite bounds (needed for randomConfiguration)
+        for i in range(self.model.njoints):
+            idx_q = self.model.joints[i].idx_q
+            nq_j  = self.model.joints[i].nq
+            for k in range(nq_j):
+                if not np.isfinite(self.model.lowerPositionLimit[idx_q + k]):
+                    self.model.lowerPositionLimit[idx_q + k] = -np.pi
+                if not np.isfinite(self.model.upperPositionLimit[idx_q + k]):
+                    self.model.upperPositionLimit[idx_q + k] = np.pi
 
         self.nq       = self.model.nq
         self.nv       = self.model.nv
@@ -541,8 +556,8 @@ def parse_args():
         description="Plug-and-play robot dynamic identification via Pinocchio."
     )
     p.add_argument(
-        "urdf", nargs="?", default="robots/sixdof_arm.urdf",
-        help="Path to robot URDF  (default: robots/sixdof_arm.urdf)",
+        "urdf", nargs="?", default="robots/my-robot/single_finger.xml",
+        help="Path to robot URDF or MJCF  (default: robots/my-robot/single_finger.xml)",
     )
     p.add_argument("--T",         type=float, default=30.0,
                    help="Trajectory duration [s]")

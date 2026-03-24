@@ -1,0 +1,13 @@
+{
+    "configuration": "default",
+    "documentId": "0ca8f6dc1c3165b5ff294052",
+    "documentMicroversion": "a4c8066dd956c7d0e927f540",
+    "elementId": "b7d5284dc5c68e3eccc2d3f3",
+    "fullConfiguration": "default",
+    "id": "MCz9O3k1pTsOFp3ac",
+    "isStandardContent": false,
+    "name": "motor_base <1>",
+    "partId": "JJD",
+    "suppressed": false,
+    "type": "Part"
+}

@@ -1,0 +1,13 @@
+{
+    "configuration": "default",
+    "documentId": "0ca8f6dc1c3165b5ff294052",
+    "documentMicroversion": "a4c8066dd956c7d0e927f540",
+    "elementId": "d8d4b39568d05fa1489e8ca6",
+    "fullConfiguration": "default",
+    "id": "MAE6ql/yAc85ChWuD",
+    "isStandardContent": false,
+    "name": "connector_j1 <1>",
+    "partId": "JHD",
+    "suppressed": false,
+    "type": "Part"
+}

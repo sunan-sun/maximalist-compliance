@@ -1,0 +1,38 @@
+{
+    // Onshape URL of the assembly
+    "url": "https://cad.onshape.com/documents/0ca8f6dc1c3165b5ff294052/w/4eb9a1710e21fd7c5f4137b7/e/36630ef2861271939fa78eaf",
+    // Output format
+    "output_format": "mujoco",
+
+    "ignore": {
+        // Ignore visual for visual
+        "hex*": "collision",
+        "screw*": "collision",
+        "ph*": "collision",
+    },
+
+    "merge_stls": "collision",
+    "simplify_stls": true,
+    "max_stl_size": 1,
+    // "convex_decomposition": true,
+
+    // "joint_properties": {
+    //     // Default properties for all joints
+    //     "*": {
+    //         "actuated": true,
+    //         "damping": 0.001,
+    //         "armature": 0.0045,
+    //         "frictionloss": 0.006,
+    //         "kp": 900.0,
+    //         "kd": 0.0,
+    //         "tau_max": 0.68,
+    //         "q_dot_max": 6.52,
+    //         "tau_q_dot_max": 0.49,
+    //         "q_dot_tau_max": 1.0,
+    //         "tau_brake_max": 1.54,
+    //         "kd_min": 0.341,
+    //         "kt": 0.333,
+    //         "gain_backdrive": 5.0
+    //     },
+    // },
+}

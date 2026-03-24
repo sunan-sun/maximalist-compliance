@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(python -c \"import ast; ast.parse\\(open\\(''momentum_observer_identified.py''\\).read\\(\\)\\); print\\(''OK''\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\(''momentum_observer_identified.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''OK''\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''momentum_observer_identified.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''OK''\\)\")",
+      "Bash(pip install:*)",
+      "Bash(git push:*)",
+      "Bash(conda install:*)",
+      "Bash(conda run:*)",
+      "Bash(MPLBACKEND=Agg MPLCONFIGDIR=/tmp/claude-1000/mpl /home/sunan/miniconda3/envs/venv3.11/bin/python computed_torque_control.py 2>&1)"
     ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
   }
 }

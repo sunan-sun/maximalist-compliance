@@ -29,7 +29,8 @@ Plant simulation uses pin.aba (Articulated Body Algorithm, forward dynamics).
 
 Usage
 -----
-    python momentum_observer_identified.py robots/planar_2dof.urdf
+    python momentum_observer_identified.py
+    python momentum_observer_identified.py robots/my-robot/single_finger.xml
     python momentum_observer_identified.py robots/sixdof_arm.urdf --K_O 20
 """
 
@@ -60,14 +61,15 @@ def simulate(
     Kp:        float = 50.0,
     Kd:        float = 8.0,
     q_ref:     np.ndarray = None,
-    tau_max:   float = 500.0,
+    tau_max:   float = None,
+    tau_ext_mag: float = None,
 ):
     """
     Simulate the robot plant + two momentum observers in parallel.
 
     External torque schedule (joint 0):
         0   →  2 s :  no contact
-        2   →  4 s :  step external torque  τ_ext[0] = +5 N·m
+        2   →  4 s :  step external torque  τ_ext[0] = tau_ext_mag
         4   →  T   :  released
 
     Returns a dict of logged signals.
@@ -95,6 +97,20 @@ def simulate(
     print(f"  Inertia diagonal (neutral):  min={m_diag.min():.4f}  max={m_diag.max():.4f}  mean={m_ref:.4f} kg·m²")
     print(f"  Per-joint Kp range: [{Kp_vec.min():.2f}, {Kp_vec.max():.2f}]  "
           f"Kd range: [{Kd_vec.min():.3f}, {Kd_vec.max():.3f}]")
+
+    # ── Auto-scale torque limits and disturbance to robot size ──────────────
+    # Use gravity torque at a non-neutral config as a scale reference
+    q_test = pin.neutral(model)
+    q_test[:nv] = 0.5  # offset from neutral
+    G_scale = np.max(np.abs(pin.computeGeneralizedGravity(model, data, q_test)))
+    G_scale = max(G_scale, m_ref * 9.81 * 0.05)  # fallback for tiny robots
+
+    if tau_max is None:
+        tau_max = max(50.0 * G_scale, 1.0)
+    if tau_ext_mag is None:
+        tau_ext_mag = max(2.0 * G_scale, 0.01)
+    print(f"  tau_ext disturbance: {tau_ext_mag:.4f} N·m  (auto-scaled)")
+    print(f"  tau_max saturation:  {tau_max:.2f} N·m")
 
     # ── Initial conditions ───────────────────────────────────────────────────
     q  = pin.neutral(model)
@@ -126,7 +142,7 @@ def simulate(
         # ── External torque schedule ─────────────────────────────────────────
         tau_ext = np.zeros(nv)
         if 2.0 <= t < 4.0:
-            tau_ext[0] = 2.0    # step disturbance on joint 0
+            tau_ext[0] = tau_ext_mag    # step disturbance on joint 0
 
         # ── All dynamic terms at current (q, dq) — consistent time step ─────
         q_r    = q if nq == nv else q[:nv]
@@ -285,7 +301,7 @@ def plot(log, robot_name, contact_window=(2.0, 4.0)):
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("urdf",       nargs="?", default="robots/sixdof_arm.urdf")
+    p.add_argument("urdf",       nargs="?", default="robots/my-robot/single_finger.xml")
     p.add_argument("--T_id",     type=float, default=30.0,  help="Identification duration [s]")
     p.add_argument("--T_sim",    type=float, default=6.0,   help="Simulation duration [s]")
     p.add_argument("--dt",       type=float, default=1e-3,  help="Simulation timestep [s]")
@@ -293,7 +309,8 @@ def parse_args():
     p.add_argument("--Kp",       type=float, default=50.0,  help="PD proportional gain")
     p.add_argument("--Kd",       type=float, default=8.0,   help="PD derivative gain")
     p.add_argument("--noise",    type=float, default=0.0,   help="Identification torque noise [N·m]")
-    p.add_argument("--tau_max",  type=float, default=500.0, help="Torque saturation limit [N·m]")
+    p.add_argument("--tau_max",  type=float, default=0.0,   help="Torque saturation limit [N·m] (0=auto)")
+    p.add_argument("--tau_ext",  type=float, default=0.0,   help="External disturbance magnitude [N·m] (0=auto)")
     return p.parse_args()
 
 
@@ -318,7 +335,7 @@ if __name__ == "__main__":
     print(" ONLINE — Momentum Observer Simulation")
     print("=" * 60)
     print(f"  K_O={args.K_O},  Kp={args.Kp},  Kd={args.Kd},  dt={args.dt}")
-    print(f"  External torque on joint 1:  +5 N·m from t=2s to t=4s")
+    print(f"  External torque on joint 1:  auto-scaled from t=2s to t=4s")
 
     # Hold at neutral — gains are per-joint scaled so no need for a non-trivial pose.
     # The external torque step on joint 1 is the only excitation needed.
@@ -332,7 +349,8 @@ if __name__ == "__main__":
         Kp      = args.Kp,
         Kd      = args.Kd,
         q_ref   = q_ref,
-        tau_max = args.tau_max,
+        tau_max = args.tau_max if args.tau_max > 0 else None,
+        tau_ext_mag = args.tau_ext if args.tau_ext > 0 else None,
     )
 
     # ── Summary ───────────────────────────────────────────────────────────────
