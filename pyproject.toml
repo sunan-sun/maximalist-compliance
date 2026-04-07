@@ -1,0 +1,18 @@
+[project]
+name = "maxcomp"
+version = "0.1.0"
+description = "Regressor-based robot dynamic identification pipeline"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+]
+
+[project.scripts]
+maxcomp-identify = "scripts.identify:main"
+maxcomp-verify = "scripts.verify:main"
+maxcomp-excitation = "scripts.optimize_excitation:main"
+maxcomp-observe = "scripts.observe:main"
+maxcomp-control = "scripts.control:main"
+maxcomp-view = "scripts.view:main"

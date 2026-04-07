@@ -1,10 +1,34 @@
 # Project: Maximalist Compliance
 
 ## Overview
-Regressor-based robot dynamic identification pipeline with momentum observer for collision/contact detection. Three-stage pipeline:
-1. **Identification** (`robot_identification.py`) — find identifiable base parameters via rank-revealing QR on the joint torque regressor, estimate them from Fourier excitation trajectories
-2. **Verification** (`dynamic_terms_verification.py`) — reconstruct individual dynamic terms (M, G, C·q̇, p) via sub-regressors and compare against Pinocchio ground truth
-3. **Observer** (`momentum_observer_identified.py`) — momentum-based disturbance observer using only identified parameters
+Regressor-based robot dynamic identification pipeline with momentum observer for collision/contact detection.
+
+## Project Structure
+```
+maxcomp/                  # Python package
+  core.py                 # RobotIdentifier, BaseParams
+  identification.py       # Full identification pipeline + plotting
+  regressors.py           # Sub-regressor helpers + ground truth functions
+  excitation.py           # Fourier trajectory optimizer
+  verification.py         # Dynamic term verification vs Pinocchio
+  observer.py             # Momentum-based disturbance observer
+  control.py              # Computed torque controller
+  viewer.py               # MuJoCo interactive viewer
+scripts/                  # CLI entry points
+  identify.py             # python scripts/identify.py <urdf>
+  verify.py               # python scripts/verify.py <urdf>
+  optimize_excitation.py  # python scripts/optimize_excitation.py <urdf>
+  observe.py              # python scripts/observe.py <urdf>
+  control.py              # python scripts/control.py <urdf>
+  view.py                 # python scripts/view.py <model.xml>
+robots/                   # URDF/MJCF robot models
+output/                   # Generated plots (gitignored)
+```
+
+### Pipeline stages
+1. **Identification** (`maxcomp/identification.py`) — find identifiable base parameters via rank-revealing QR on the joint torque regressor, estimate them from Fourier excitation trajectories
+2. **Verification** (`maxcomp/verification.py`) — reconstruct individual dynamic terms (M, G, C·q̇, p) via sub-regressors and compare against Pinocchio ground truth
+3. **Observer** (`maxcomp/observer.py`) — momentum-based disturbance observer using only identified parameters
 
 ## Obsidian Vault
 Research notes are in `research-note/` within the same parent directory as this repo (e.g. `/home/sunan/research-note/`). Always search the parent directory for `research-note/` rather than hardcoding a path.
